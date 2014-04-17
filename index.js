@@ -41,8 +41,8 @@ var svg = main.append("svg");
 
 var sizeSvg = function () {
   svg
-  .attr("width", document.innerWidth)
-  .attr("height", document.innerHeight)
+  .attr("width", window.innerWidth)
+  .attr("height", window.innerHeight)
   ;
 };
 sizeSvg();
