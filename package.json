@@ -1,0 +1,36 @@
+{
+  "name": "flashtag",
+  "version": "0.1.0",
+  "description": "force-directed graph of images with same tag",
+  "main": "index.js",
+  "scripts": {
+    "develop": "(export NODE_ENV=development; beefy index.js:bundle.js 5000 -- -t cssify)",
+    "test": "(export NODE_ENV=test; testling)",
+    "start": "(export NODE_ENV=production; browserify index.js -o bundle.js -t cssify -g uglifyify)",
+    "deploy": "(export NODE_ENV=production; npm start && ./bin/deploy)"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/ahdinosaur/flashtag.git"
+  },
+  "keywords": [],
+  "author": "ahdinosaur",
+  "license": "AGPLv3",
+  "bugs": {
+    "url": "https://github.com/ahdinosaur/flashtag/issues"
+  },
+  "homepage": "https://github.com/ahdinosaur/flashtag",
+  "dependencies": {
+    "browserify": "^3.41.0",
+    "cssify": "^0.5.0",
+    "uglifyify": "^2.1.1",
+    "bluebird": "~1.2.2",
+    "xhr": "~1.5.0",
+    "xtend": "~3.0.0",
+    "flickrapi": "~0.3.14",
+    "d3": "~3.4.6"
+  },
+  "devDependencies": {
+    "beefy": "^1.1.0"
+  }
+}
