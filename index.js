@@ -1,8 +1,9 @@
-var Promise = require('bluebird');
 var d3 = require('d3');
 
 var config = require('./config');
 require('./index.css');
+
+var circle = require('./js/circle');
 
 /*
 var xhr = Promise.promisify(require('xhr'));
@@ -31,33 +32,28 @@ var flickr = new window.Flickr({
   api_key: config.flickr_api_key,
 });
 
-var getPhotos = Promise.promisify(
-  flickr.photos.search
-).bind(flickr);
-
 var main = d3.select("main");
 
 var svg = main.append("svg");
 
-var sizeSvg = function () {
-  svg
-  .attr("width", window.innerWidth)
-  .attr("height", window.innerHeight)
-  ;
-};
-sizeSvg();
-window.onsize = sizeSvg;
-
 var force = d3.layout.force()
-.gravity(.03)
-.distance(150)
-.charge(-100)
-.size([svg.attr("width"), svg.attr("height")])
+.gravity(.01)
+.linkDistance(function (link, index) {
+  return (index * 4.5) + 100;
+})
+.charge(-250)
 ;
 
-console.log(force.size())
+var width;
+var height;
 
-var tagGraph = function (photos, tag) {
+var graph;
+
+var link;
+var tagNode;
+var photoNode;
+
+var getGraph = function (photos, tag) {
 
   var graph = {};
   var nodes = graph.nodes = [tag].concat(photos);
@@ -74,85 +70,146 @@ var tagGraph = function (photos, tag) {
   return graph;
 };
 
+var setupGraph = function (force, graph) {
+
+  graph = graph || {};
+  var nodes = graph.nodes || [];
+  var links = graph.links || [];
+
+  var tag = nodes[0];
+  var photos = nodes.slice(1, nodes.length);
+
+  if (tag) {
+    tag.x = width / 2;
+    tag.y = height / 2;
+  }
+
+  if (photos) {
+    photos.forEach(function (node, index) {
+      var c = circle({
+        scaleX: width / 2,
+        scaleY: height / 2,
+        step: index,
+        steps: photos.length,
+      });
+      node.x = (width / 2) + c.x;
+      node.y = (height / 2) + c.y;
+    });
+  }
+
+  force
+  .size([width, height])
+  .nodes(nodes)
+  .links(links)
+  .start()
+  ;
+};
+
+var setupSvg = function (svg, graph) {
+
+  graph = graph || {};
+  var nodes = graph.nodes || [];
+  var links = graph.links || [];
+
+  var tag = nodes[0];
+  var photos = nodes.slice(1, nodes.length);
+
+  link = svg.selectAll(".link")
+  .data(graph.links)
+  .enter().append("line")
+    .attr("class", "link")
+  ;
+
+  tagNode = svg.selectAll(".tag")
+  .data([tag])
+  .enter().append("g")
+    .attr("class", "tag")
+    .call(force.drag)
+  ;
+
+  tagNode.append("text")
+  .attr("dx", 24)
+  .attr("dy", "2em")
+  .text(function(d) { return d.name })
+  ;
+
+  photoNode = svg.selectAll(".photo")
+  .data(photos)
+  .enter().append("g")
+    .attr("class", "photo")
+    .call(force.drag)
+  ;
+
+  photoNode.append("image")
+  .attr("xlink:href", function (p) { return p.url_t; })
+  .attr("width", function (p) { return p.width_t; })
+  .attr("height", function (p) { return p.height_t; })
+  ;
+}
+
 var get = function (tag) {
 
-  getPhotos({
+  flickr.photos.search({
     page: 1,
-    per_page: 30,
+    per_page: 60,
     tags: [tag],
     sort: "interestingness-desc",
     extras: "url_t"
-  }).then(function (result) {
-    
-    var photos = result.photos.photo;
-    var tagObj = {
+  }, function (err, result) {
+    if (err) { throw err; }
+
+    photos = result.photos.photo;
+
+    graph = getGraph(photos, {
+      x: (width / 2),
+      y: (height / 2),
       name: tag,
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    };
-    var graph = tagGraph(photos, tagObj);
+    });
 
-    console.log(graph);
+    setupGraph(force, graph);
 
-    force
-    .nodes(graph.nodes)
-    .links(graph.links)
-    .start()
-    ;
+    setupSvg(svg, graph);
 
-    var link = svg.selectAll(".link")
-    .data(graph.links)
-    .enter().append("line")
-      .attr("class", "link")
-    ;
-
-    var tagNode = svg.selectAll(".tag")
-    .data([tagObj])
-    .enter().append("g")
-      .attr("class", "tag")
-      .call(force.drag)
-    ;
-
-    tagNode.append("text")
-    .attr("dx", 24)
-    .attr("dy", "2em")
-    .text(function(d) { return d.name })
-    ;
-
-    var photoNode = svg.selectAll(".photo")
-    .data(photos)
-    .enter().append("g")
-      .attr("class", "photo")
-      .call(force.drag)
-    ;
-
-    photoNode.append("image")
-    .attr("xlink:href", function (p) { return p.url_t; })
-    .attr("width", function (p) { return p.width_t; })
-    .attr("height", function (p) { return p.height_t; })
-    ;
-
-    force.on("tick", function () {
-      link
-      .attr("x1", function (d) { return d.source.x; })
-      .attr("y1", function (d) { return d.source.y; })
-      .attr("x2", function (d) { return d.target.x; })
-      .attr("y2", function (d) { return d.target.y; })
-      ;
-
-      tagNode
-      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-      ;
-
-      photoNode
-      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-      ;
-
-    }); 
-
-  }).catch(function (err) {
-    throw err;
   });
 };
+
+force.on("tick", function () {
+  if (link) {
+    link
+    .attr("x1", function (d) { return d.source.x; })
+    .attr("y1", function (d) { return d.source.y; })
+    .attr("x2", function (d) { return d.target.x; })
+    .attr("y2", function (d) { return d.target.y; })
+    ;
+  }
+
+  if (tagNode) {
+    tagNode
+    .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+    ;
+  }
+
+  if (photoNode) {
+    photoNode
+    .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+    ;
+  }
+
+});
+
+var resize = function () {
+  width = window.innerWidth;
+  height = window.innerHeight;
+
+  svg
+  .attr("width", width)
+  .attr("height", height)
+  ;
+
+  setupGraph(force, graph);
+};
+
+resize();
+d3.select(window).on("resize", resize);
 
 get("art");
