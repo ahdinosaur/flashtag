@@ -3,6 +3,12 @@ html, body, main, svg {
   width: 100%;
   margin: 0;
   padding: 0;
+  text-align: center;
+}
+
+nav {
+  position: fixed;
+  display: inline;
 }
 
 .link {

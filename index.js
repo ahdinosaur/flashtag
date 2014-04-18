@@ -34,7 +34,7 @@ var flickr = new window.Flickr({
 
 var main = d3.select("main");
 
-var svg = main.append("svg");
+var svg;
 
 var force = d3.layout.force()
 .gravity(.01)
@@ -209,7 +209,18 @@ var resize = function () {
   setupGraph(force, graph);
 };
 
-resize();
+var reset = function () {
+  if (svg) { svg.remove(); }
+  svg = main.append("svg");
+}
+
 d3.select(window).on("resize", resize);
 
-get("art");
+var tagInput = document.getElementById("tagInput");
+tagInput.addEventListener("keyup", function (e) {
+  if (e.keyCode === 13) {
+    reset();
+    resize();
+    get(tagInput.value);
+  }
+})
