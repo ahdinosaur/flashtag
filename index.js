@@ -128,8 +128,6 @@ var setupSvg = function (svg, graph) {
   ;
 
   tagNode.append("text")
-  .attr("dx", 24)
-  .attr("dy", "2em")
   .text(function(d) { return d.name })
   ;
 
@@ -148,6 +146,10 @@ var setupSvg = function (svg, graph) {
 }
 
 var get = function (tag) {
+
+  tag = tag.replace(/^#/, "");
+
+  console.log(tag);
 
   flickr.photos.search({
     page: 1,
@@ -216,11 +218,21 @@ var reset = function () {
 
 d3.select(window).on("resize", resize);
 
+var run = function (tag) {
+  reset();
+  resize();
+  get(tag);
+  window.location.hash = tag;
+}
+
 var tagInput = document.getElementById("tagInput");
 tagInput.addEventListener("keyup", function (e) {
   if (e.keyCode === 13) {
-    reset();
-    resize();
-    get(tagInput.value);
+    run(tagInput.value);
   }
-})
+});
+
+if (window.location.hash) {
+  run(window.location.hash);
+}
+
